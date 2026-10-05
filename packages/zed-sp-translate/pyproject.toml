@@ -1,6 +1,6 @@
 [project]
 name = "zed-sp-translate"
-version = "0.1.0dev"
+version = "0.1.0dev1"
 description = "The translator for zed-scrapy-playwright that translates the methods from scrapy-playwright."
 readme = "README.md"
 license = "MIT"

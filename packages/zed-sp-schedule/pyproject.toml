@@ -1,6 +1,6 @@
 [project]
 name = "zed-sp-schedule"
-version = "0.1.2dev0"
+version = "0.1.2dev1"
 description = "The scheduler of zed-scrapy-playwright for managing the objects derived from Playwright."
 readme = "README.md"
 license = "MIT"
