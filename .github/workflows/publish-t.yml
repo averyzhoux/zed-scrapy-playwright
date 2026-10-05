@@ -1,8 +1,8 @@
-# name: Publish to PyPI
+# name: Publish ZSP-Translator to PyPI
 # on:
 #   push:
 #     tags:
-#       - "v*"
+#       - "translate-v[0-9]*"
 
 # jobs:
 #   build-and-publish:
