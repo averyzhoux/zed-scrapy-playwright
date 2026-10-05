@@ -1070,7 +1070,7 @@ provides-extras = ["all", "schedule", "translate"]
 
 [[package]]
 name = "zed-sp-schedule"
-version = "0.1.1a0"
+version = "0.1.2.dev0"
 source = { editable = "packages/zed-sp-schedule" }
 dependencies = [
     { name = "zed-scrapy-playwright" },

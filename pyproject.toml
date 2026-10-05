@@ -3,7 +3,7 @@ name = "zed-scrapy-playwright"
 version = "0.3.1dev0"
 description = "Less meta-dict config, more functional coding. Schedule browser pages as easily as CSS selectors."
 readme = "README.md"
-license = "Apache-2.0"
+license = "MIT"
 license-files = ["LICENSE"]
 authors = [
     { name = "zhouzhouos", email = "leisure-zyf@qq.com" }
