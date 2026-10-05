@@ -1,0 +1,21 @@
+[project]
+name = "zed-sp-schedule"
+version = "0.1.2dev0"
+description = "The scheduler of zed-scrapy-playwright for managing the objects derived from Playwright."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "zhouzhouos", email = "leisure-zyf@qq.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "zed-scrapy-playwright",   # 声明依赖主包
+]
+
+[project.scripts]
+zed-sp-schedule = "zed_sp_schedule:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
