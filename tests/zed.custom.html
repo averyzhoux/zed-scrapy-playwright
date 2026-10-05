@@ -1,0 +1,37 @@
+<!--基本上很少会有用到这个客制化文件的需要，所以定义结构的时候，怎么舒服怎么来即可 -->
+
+<main id="1">
+    <zed-playwright>
+        <zed-browser>
+            <zed-context id="c1">
+                <zed-page class="x" data-address="?" data-state="unmount"
+                    >line</zed-page
+                >
+            </zed-context>
+        </zed-browser>
+    </zed-playwright>
+    <script>
+        //这里用于批量脚本
+        [...Array(3)].forEach((_) => {
+            document
+                .getElementById("c1")
+                .insertAdjacentHTML(
+                    "beforeend",
+                    '<zed-page class="x" data-address="?" data-state="unmount">line</zed-page>',
+                );
+        });
+
+    </script>
+</main>
+
+<main id="2">
+    <zed-playwright>
+        <zed-browser>
+            <zed-context>
+                <zed-page class="x" data-address="?" data-state="unmount"
+                    >line
+                </zed-page>
+            </zed-context>
+        </zed-browser>
+    </zed-playwright>
+</main>
