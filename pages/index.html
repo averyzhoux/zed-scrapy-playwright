@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>总览 · zed-scrapy-playwright (zsp)</title>
+        <link rel="stylesheet" href="assets/style.css" />
+    </head>
+    <body>
+        <header class="topbar">
+            <div class="inner">
+                <a class="brand" href="index.html">zed-<span>scrapy</span>-playwright</a>
+                <nav>
+                    <a class="active" href="index.html">总览</a>
+                    <a href="zsp/index.html">zsp 主包</a>
+                    <a href="schedule/index.html">schedule</a>
+                    <a href="translator/index.html">translator</a>
+                </nav>
+            </div>
+        </header>
+
+        <main class="wrap">
+            <section class="hero">
+                <h1>zsp</h1>
+                <p class="tagline">
+                    Less meta config, more Python code.
+                    把 Scrapy 变成 Playwright 的事件调度引擎。
+                </p>
+                <div class="badges">
+                    <span class="badge">主包 v0.3.1dev2</span>
+                    <span class="badge gray">Python ≥ 3.12</span>
+                    <span class="badge gray">MIT License</span>
+                </div>
+            </section>
+
+            <p>
+                <strong>zed-scrapy-playwright（简称 zsp）</strong>
+                是一个 Scrapy 与 Playwright 的集成中间件，提供<strong>会话级控制</strong>、
+                <strong>线性编码</strong>与<strong>精准数据传输</strong>，
+                让你在 Scrapy 爬虫里以同步风格的 Python 代码使用浏览器自动化能力。
+            </p>
+
+            <h2>核心特性</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>会话级控制</h3>
+                    <p>单次 execution 内可多次 <code>page.goto()</code>，保持页面状态。</p>
+                </div>
+                <div class="card">
+                    <h3>线性编码</h3>
+                    <p>告别 callback 地狱，用同步风格书写异步浏览器操作。</p>
+                </div>
+                <div class="card">
+                    <h3>精准数据传输</h3>
+                    <p>直接在 Page 对象中提取数据，无需额外的解析步骤。</p>
+                </div>
+                <div class="card">
+                    <h3>完整类型提示</h3>
+                    <p>内联类型注解，享受 IDE 补全与类型检查。</p>
+                </div>
+                <div class="card">
+                    <h3>装饰器启用模式</h3>
+                    <p>使用 <code>@zsp.enable()</code>，支持任意爬虫类。</p>
+                </div>
+                <div class="card">
+                    <h3>Stealth 反检测</h3>
+                    <p>自动注入 <code>playwright-stealth</code>，降低被识别为机器人的风险。</p>
+                </div>
+            </div>
+
+            <h2>包的组成</h2>
+            <p>本仓库是一个 uv workspace，主包必装，两个子包为可选扩展。</p>
+            <div class="grid">
+                <a class="card" href="zsp/index.html">
+                    <h3>zed-scrapy-playwright</h3>
+                    <p>
+                        主包：下载器中间件、<code>ZedRequest</code>/<code>ZedResponse</code>、
+                        Provider 接口与默认实现。
+                    </p>
+                    <p class="path mono">src/zed_scrapy_playwright · v0.3.1dev2</p>
+                </a>
+                <a class="card" href="schedule/index.html">
+                    <h3>zed-sp-schedule</h3>
+                    <p>可选调度器：用 CSS 选择器挑选并复用 Playwright 对象。</p>
+                    <p class="path mono">packages/zed-sp-schedule · v0.1.3dev</p>
+                </a>
+                <a class="card" href="translator/index.html">
+                    <h3>zed-sp-translate</h3>
+                    <p>可选翻译器：把常见于 scrapy-playwright 的 meta 翻译为 zsp 执行流程。</p>
+                    <p class="path mono">packages/zed-sp-translate · v0.1.0dev1</p>
+                </a>
+            </div>
+
+            <h2>快速开始</h2>
+            <h3>1. 安装</h3>
+            <pre><code>pip install zed-scrapy-playwright
+playwright install   # 首次使用需安装浏览器驱动</code></pre>
+            <p>需要子包时使用 extras：</p>
+            <pre><code>pip install "zed-scrapy-playwright[all]"      # schedule + translate
+pip install "zed-scrapy-playwright[schedule]"  # 仅调度器
+pip install "zed-scrapy-playwright[translate]" # 仅翻译器</code></pre>
+
+            <h3>2. 启用中间件</h3>
+            <pre><code># settings.py
+DOWNLOADER_MIDDLEWARES = {
+    "zed_scrapy_playwright.handler.PlaywrightDownloaderMiddleware": 543,
+}</code></pre>
+
+            <h3>3. 编写爬虫</h3>
+            <pre><code>import scrapy
+import zed_scrapy_playwright as zsp
+
+@zsp.enable({
+    "browser_type": "chrome",
+    "chrome_params": {"headless": False, "executable_path": "/opt/google/chrome/chrome"},
+})
+class MySpider(scrapy.Spider):
+    name = "my_spider"
+
+    async def start(self):
+        yield zsp.ZedRequest(
+            selector="page.default",
+            execution=self.execution,
+            callback=self.parse,
+        )
+
+    @staticmethod
+    async def execution(ep: zsp.ExecParam):
+        await ep.page.goto("https://example.com")
+        return {"title": await ep.page.title()}
+
+    def parse(self, response: zsp.ZedResponse):
+        print("parse:", response.result)</code></pre>
+
+            <h2>目录结构</h2>
+            <div class="tree mono">zsp/
+├── pyproject.toml                # 工作区根配置（uv workspace 与可选依赖）
+├── README.md
+├── src/
+│   └── zed_scrapy_playwright/    # 主包：zsp
+├── packages/
+│   ├── zed-sp-schedule/          # 可选：调度器子包
+│   └── zed-sp-translate/         # 可选：翻译器子包
+├── tests/
+│   ├── test_scheduler.py
+│   └── zed.custom.html
+└── pages/                        # 本静态文档</div>
+
+            <h2>依赖</h2>
+            <table>
+                <thead>
+                    <tr><th>依赖</th><th>版本</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td class="mono">playwright</td><td>≥ 1.62.0</td><td>浏览器自动化</td></tr>
+                    <tr><td class="mono">playwright-stealth</td><td>≥ 2.0.3</td><td>反检测</td></tr>
+                    <tr><td class="mono">scrapy</td><td>≥ 2.18.0</td><td>爬虫框架</td></tr>
+                    <tr><td class="mono">icecream</td><td>≥ 2.2.0</td><td>调试输出</td></tr>
+                </tbody>
+            </table>
+
+            <p>
+                下一步：阅读 <a href="zsp/index.html">zsp 主包</a>、
+                <a href="schedule/index.html">schedule</a> 与
+                <a href="translator/index.html">translator</a> 的模块说明。
+            </p>
+        </main>
+
+        <footer>
+            <div class="inner">
+                zed-scrapy-playwright · MIT License · © 2026 zhouzhouos
+            </div>
+        </footer>
+    </body>
+</html>

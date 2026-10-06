@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>translator · zed-sp-translate</title>
+        <link rel="stylesheet" href="../assets/style.css" />
+    </head>
+    <body>
+        <header class="topbar">
+            <div class="inner">
+                <a class="brand" href="../index.html">zed-<span>scrapy</span>-playwright</a>
+                <nav>
+                    <a href="../index.html">总览</a>
+                    <a href="../zsp/index.html">zsp 主包</a>
+                    <a href="../schedule/index.html">schedule</a>
+                    <a class="active" href="index.html">translator</a>
+                </nav>
+            </div>
+        </header>
+
+        <main class="wrap">
+            <p class="breadcrumb"><a href="../index.html">总览</a> / translator</p>
+            <section class="hero">
+                <h1>zed-sp-translate</h1>
+                <p class="tagline">
+                    翻译器子包：把 scrapy-playwright 风格的写法翻译成 zsp 的执行流程。
+                </p>
+                <div class="badges">
+                    <span class="badge">v0.1.0dev1</span>
+                    <span class="badge gray">导入名 zed_sp_translate</span>
+                    <span class="badge gray">可选安装</span>
+                </div>
+            </section>
+
+            <p>
+                它面向从 <code>scrapy-playwright</code> 迁移过来的项目：旧代码里常见的
+                <code>meta</code>（例如 <code>playwright_page_methods</code>）会被翻译成
+                等价的 zsp 执行步骤，从而复用主包的 Provider。
+            </p>
+
+            <div class="wip">
+                <strong>开发中 · 预留位置</strong>
+                目前该子包只有占位实现：<code>Translator</code> 是一个空类，
+                <code>translate.py</code> 中的翻译逻辑仍以注释形式存在，尚未启用。
+            </div>
+
+            <h2>安装</h2>
+            <pre><code>pip install "zed-scrapy-playwright[translate]"
+# 或
+pip install zed-sp-translate</code></pre>
+
+            <h2>API（占位）</h2>
+            <pre><code>from zed_sp_translate import Translator
+
+# 预留：按旧写法生成/翻译执行步骤
+translator = Translator()</code></pre>
+
+            <table>
+                <thead>
+                    <tr><th>成员</th><th>状态</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td class="mono">Translator</td><td>占位</td><td>子包对外导出的翻译器类。</td></tr>
+                    <tr><td class="mono">zed-sp-translate</td><td>占位</td><td>控制台脚本入口，目前仅打印欢迎信息。</td></tr>
+                </tbody>
+            </table>
+
+            <h2>规划中的能力</h2>
+            <p>根据子包内的注释草稿，翻译器计划承担以下工作：</p>
+            <ul>
+                <li>识别兼容请求，并从 Provider 取用页面（<code>provider.css()</code>）。</li>
+                <li>把 <code>meta["playwright_page_methods"]</code> 逐条应用到页面上。</li>
+                <li>可选的 <code>Stealth</code> 反检测注入。</li>
+                <li>把页面源码包装成 <code>HtmlResponse</code> 返回给 Scrapy。</li>
+            </ul>
+            <pre><code># 旧写法（scrapy-playwright）
+meta = {
+    "playwright_page_methods": [
+        PageMethod("wait_for_selector", "h1"),
+    ],
+}
+
+# 目标：翻译为 zsp 的 execution 流程</code></pre>
+
+            <h2>模块构成</h2>
+            <div class="tree mono">packages/zed-sp-translate/
+├── pyproject.toml
+├── README.md
+└── src/zed_sp_translate/
+    ├── __init__.py   # 导出 Translator
+    └── translate.py  # Translator（占位实现）</div>
+
+            <table>
+                <thead>
+                    <tr><th>依赖</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td class="mono">—</td><td>子包自身未声明额外运行时依赖。</td></tr>
+                </tbody>
+            </table>
+
+            <h2>开发</h2>
+            <pre><code>uv sync --extra translate</code></pre>
+
+            <p>
+                相关页面：<a href="../zsp/index.html">zsp 主包</a> ·
+                <a href="../schedule/index.html">schedule</a>。
+            </p>
+        </main>
+
+        <footer>
+            <div class="inner">
+                zed-sp-translate · MIT License · © 2026 zhouzhouos
+            </div>
+        </footer>
+    </body>
+</html>

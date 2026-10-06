@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>schedule · zed-sp-schedule</title>
+        <link rel="stylesheet" href="../assets/style.css" />
+    </head>
+    <body>
+        <header class="topbar">
+            <div class="inner">
+                <a class="brand" href="../index.html">zed-<span>scrapy</span>-playwright</a>
+                <nav>
+                    <a href="../index.html">总览</a>
+                    <a href="../zsp/index.html">zsp 主包</a>
+                    <a class="active" href="index.html">schedule</a>
+                    <a href="../translator/index.html">translator</a>
+                </nav>
+            </div>
+        </header>
+
+        <main class="wrap">
+            <p class="breadcrumb"><a href="../index.html">总览</a> / schedule</p>
+            <section class="hero">
+                <h1>zed-sp-schedule</h1>
+                <p class="tagline">
+                    调度器子包：把 Playwright 对象登记成“对象表”，用 CSS 选择器挑选并复用。
+                </p>
+                <div class="badges">
+                    <span class="badge">v0.1.3dev</span>
+                    <span class="badge gray">导入名 zed_sp_schedule</span>
+                    <span class="badge gray">可选安装</span>
+                </div>
+            </section>
+
+            <p>
+                主包默认的 <code>Provider</code> 每次接管请求都会新建一个页面；而调度器子包会预先
+                创建并管理 <code>Playwright</code> / <code>Browser</code> /
+                <code>BrowserContext</code> / <code>Page</code> 对象，让它们可以被<strong>复用</strong>。
+            </p>
+
+            <h2>安装</h2>
+            <pre><code>pip install "zed-scrapy-playwright[schedule]"
+# 或
+pip install zed-sp-schedule</code></pre>
+            <p>安装后无需改代码：中间件探测到 <code>zed_sp_schedule</code> 时会自动改用 <code>Scheduler</code>。</p>
+
+            <div class="wip">
+                <strong>开发中</strong>
+                本子包仍在早期开发阶段：对象表、状态与首页装配已经可用，
+                而基于队列的调度与 <code>takeover</code> 的完整接管逻辑尚在完善。
+            </div>
+
+            <h2>工作原理</h2>
+            <p>
+                调度器启动时会在一个“首页”里构建如下 DOM，每个被管理的对象对应一个元素；
+                元素的属性把 DOM 和对象表关联起来：
+            </p>
+            <pre><code>&lt;main&gt;
+  &lt;playwright&gt;
+    &lt;browser&gt;
+      &lt;context&gt;
+        &lt;page&gt;&lt;/page&gt;
+      &lt;/context&gt;
+    &lt;/browser&gt;
+  &lt;/playwright&gt;
+&lt;/main&gt;</code></pre>
+            <table>
+                <thead>
+                    <tr><th>属性</th><th>来源</th><th>含义</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="mono">data-address</td>
+                        <td><code>PageData.address</code></td>
+                        <td>对象表里对应 <code>ObjectProxy</code> 的地址（<code>id()</code>）。</td>
+                    </tr>
+                    <tr>
+                        <td class="mono">data-status</td>
+                        <td><code>PageData.status</code></td>
+                        <td>该对象当前的使用状态。</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>
+                于是爬虫里就能写 <code>selector="page.default"</code> 这样的 CSS 选择器，
+                由调度器把选择器解析成具体的 Playwright 对象。
+            </p>
+
+            <h3>页面状态</h3>
+            <table>
+                <thead>
+                    <tr><th>状态</th><th>含义</th><th>调度优先级</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td class="mono">Leisure</td><td>空闲，可直接使用</td><td>最高</td></tr>
+                    <tr><td class="mono">Cooling</td><td>冷却中</td><td>次之</td></tr>
+                    <tr><td class="mono">BeUsing</td><td>正在被使用</td><td>再次</td></tr>
+                    <tr><td class="mono">Unmount</td><td>已卸载</td><td>最低</td></tr>
+                </tbody>
+            </table>
+
+            <h2>API</h2>
+            <pre><code>from zed_sp_schedule import Scheduler, PageStatus, PageData, ObjectProxy
+
+scheduler = await Scheduler(config).start()   # config 同主包 ConfigDict
+proxies = await scheduler.css("page.default") # 按选择器取出对象代理
+response = await scheduler.takeover(request)  # 接管一个 ZedRequest
+await scheduler.close()                       # 释放资源</code></pre>
+
+            <table>
+                <thead>
+                    <tr><th>成员</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td class="mono">Scheduler(info)</td><td>调度器主体，继承自主包的 <code>Provider</code>。</td></tr>
+                    <tr><td class="mono">Scheduler.start()</td><td>启动 Playwright、装配首页并登记默认对象；未提供 config 时抛 <code>ValueError</code>。</td></tr>
+                    <tr><td class="mono">Scheduler.css(selector)</td><td>返回选择器命中的 <code>ObjectProxy</code> 列表。</td></tr>
+                    <tr><td class="mono">Scheduler.takeover(request)</td><td>接管请求：无 <code>selector</code> 时新开页面，否则按选择器分发。</td></tr>
+                    <tr><td class="mono">Scheduler.close()</td><td>关闭浏览器并停止 Playwright。</td></tr>
+                    <tr><td class="mono">PageStatus</td><td>页面状态枚举。</td></tr>
+                    <tr><td class="mono">PageData</td><td>DOM 属性名枚举（<code>data-address</code> / <code>data-status</code>）。</td></tr>
+                    <tr><td class="mono">ObjectProxy</td><td>被调度的对象 + 一个 <code>asyncio.Queue</code>。</td></tr>
+                </tbody>
+            </table>
+
+            <h2>默认登记的对象</h2>
+            <p><code>bind_defaults()</code> 会登记四个默认对象并绑定到对应元素：</p>
+            <table>
+                <thead>
+                    <tr><th>选择器</th><th>对象</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td class="mono">playwright:first</td><td><code>self.playwright</code></td></tr>
+                    <tr><td class="mono">browser:first</td><td><code>self.default_browser</code></td></tr>
+                    <tr><td class="mono">context:first</td><td><code>self.default_context</code></td></tr>
+                    <tr><td class="mono">page:first</td><td><code>self.default_page</code>（class 含 <code>default</code>，可用 <code>page.default</code> 选中）</td></tr>
+                </tbody>
+            </table>
+
+            <h2>自定义 HTML</h2>
+            <p>
+                首页骨架来自包内 <code>zed.home.html</code>，其中 <code>&lt;main&gt;</code>
+                会被“自定义配置”替换，用来声明各种页面组合。定位优先级为：
+            </p>
+            <ol>
+                <li>命令行参数 <code>zed=&lt;path&gt;</code>；</li>
+                <li>当前工作目录下的 <code>zed.custom.html</code>；</li>
+                <li>包内默认的 <code>assets/zed.custom.html</code>。</li>
+            </ol>
+            <div class="note">
+                <strong>找不到文件时</strong>
+                显式通过命令行指定的文件若不存在，<code>check()</code> 会抛出 <code>FileNotFoundError</code>。
+            </div>
+
+            <h2>模块构成</h2>
+            <div class="tree mono">packages/zed-sp-schedule/
+├── pyproject.toml
+├── README.md
+├── CHANGELOG.md
+└── src/zed_sp_schedule/
+    ├── __init__.py   # 导出 Scheduler / PageStatus / PageData / ObjectProxy
+    ├── provider.py   # Scheduler、状态机与对象表
+    ├── functions.py  # 自定义 HTML 定位：check / content / choose
+    ├── constants.py  # 常量与 assets 资源定位
+    └── assets/       # zed.home.html、zed.custom.html、jquery-4.0.0.slim.min.js</div>
+
+            <table>
+                <thead>
+                    <tr><th>依赖</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td class="mono">zed-scrapy-playwright</td><td>主包，提供 <code>Provider</code> 接口与请求类型。</td></tr>
+                    <tr><td class="mono">colorama</td><td><code>functions.check()</code> 输出着色（尚未在 pyproject 中声明）。</td></tr>
+                </tbody>
+            </table>
+
+            <h2>开发</h2>
+            <pre><code>uv sync --extra schedule
+uv run pytest tests/test_scheduler.py -q</code></pre>
+        </main>
+
+        <footer>
+            <div class="inner">
+                zed-sp-schedule · MIT License · © 2026 zhouzhouos
+            </div>
+        </footer>
+    </body>
+</html>

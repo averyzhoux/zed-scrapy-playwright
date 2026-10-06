@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>zsp 主包 · zed-scrapy-playwright</title>
+        <link rel="stylesheet" href="../assets/style.css" />
+    </head>
+    <body>
+        <header class="topbar">
+            <div class="inner">
+                <a class="brand" href="../index.html">zed-<span>scrapy</span>-playwright</a>
+                <nav>
+                    <a href="../index.html">总览</a>
+                    <a class="active" href="index.html">zsp 主包</a>
+                    <a href="../schedule/index.html">schedule</a>
+                    <a href="../translator/index.html">translator</a>
+                </nav>
+            </div>
+        </header>
+
+        <main class="wrap">
+            <p class="breadcrumb"><a href="../index.html">总览</a> / zsp 主包</p>
+            <section class="hero">
+                <h1>zed-scrapy-playwright</h1>
+                <p class="tagline">
+                    导入名 <code>zed_scrapy_playwright</code>（约定别名 <code>zsp</code>）。
+                </p>
+                <div class="badges">
+                    <span class="badge">v0.3.1dev2</span>
+                    <span class="badge gray">必装主包</span>
+                    <span class="badge gray">MIT</span>
+                </div>
+            </section>
+
+            <p>
+                主包提供 Scrapy 下载器中间件与一套请求 / 响应类型。它拦截标记过的
+                <code>ZedRequest</code>，把执行权交给一个 Playwright
+                <strong>Provider</strong>，并把执行结果包装成普通的 Scrapy Response 交回引擎。
+            </p>
+
+            <h2>公共 API</h2>
+            <table>
+                <thead>
+                    <tr><th>名称</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="mono">zsp.enable(config=None)</td>
+                        <td>类装饰器：挂载 <code>Spider.config</code>，并包装 <code>Spider.start</code> 以便启动时自检。</td>
+                    </tr>
+                    <tr>
+                        <td class="mono">zsp.validate(spider)</td>
+                        <td>检查中间件是否已注册到 <code>DOWNLOADER_MIDDLEWARES</code>，返回布尔值。</td>
+                    </tr>
+                    <tr>
+                        <td class="mono">zsp.ZedRequest(...)</td>
+                        <td>继承自 <code>scrapy.Request</code>，额外携带 <code>execution</code> 与 <code>selector</code>。</td>
+                    </tr>
+                    <tr>
+                        <td class="mono">zsp.ZedResponse(result, ...)</td>
+                        <td>继承自 <code>scrapy.http.Response</code>，执行结果放在 <code>.result</code>。</td>
+                    </tr>
+                    <tr>
+                        <td class="mono">zsp.ExecParam(request, page)</td>
+                        <td>执行函数入参，字段为 <code>.request</code> 与 <code>.page</code>。</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>ZedRequest 参数</h3>
+            <table>
+                <thead>
+                    <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td class="mono">execution</td><td>Callable</td><td>异步执行函数，接收一个 <code>ExecParam</code>。</td></tr>
+                    <tr><td class="mono">callback</td><td>Callable</td><td>Scrapy 回调，接收 <code>ZedResponse</code> 或 <code>HtmlResponse</code>。</td></tr>
+                    <tr><td class="mono">selector</td><td>str | None</td><td>配合调度器子包使用的 CSS 选择器。</td></tr>
+                    <tr><td class="mono">meta</td><td>dict | None</td><td>透传给 Scrapy。</td></tr>
+                    <tr><td class="mono">dont_filter</td><td>bool</td><td>默认 <code>True</code>。</td></tr>
+                </tbody>
+            </table>
+
+            <h2>执行契约</h2>
+            <pre><code>async def execution(ep: zsp.ExecParam) -> dict | None:
+    await ep.page.goto(...)     # 同步风格书写异步操作
+    return {"key": value}       # 返回 dict → ZedResponse.result
+
+# 返回 None 时，主包会用页面源码构造 HtmlResponse</code></pre>
+
+            <div class="note">
+                <strong>请求前缀</strong>
+                <code>ZedRequest</code> 的 URL 被固定为 <code>playwright://request</code>，
+                响应为 <code>playwright://response</code>；中间件会拦截并改写这类内部请求。
+            </div>
+
+            <h2>配置</h2>
+            <pre><code>{
+    "browser_type": "chrome",
+    "chrome_params": {
+        "headless": False,
+        "executable_path": "/opt/google/chrome/chrome",
+    },
+}</code></pre>
+            <p>
+                <code>ConfigDict</code> 的 <code>chrome_params</code> 对应
+                <code>ChromeBrowserLaunchParameters</code>，字段与 Playwright 的
+                <code>chromium.launch()</code> 参数一致（如 <code>args</code>、
+                <code>timeout</code>、<code>proxy</code>、<code>slow_mo</code> 等）。
+            </p>
+
+            <h2>工作流程</h2>
+            <ol>
+                <li><code>@zsp.enable(config)</code> 把配置挂到爬虫类，并在 <code>start</code> 前做自检。</li>
+                <li>中间件的 <code>from_crawler</code> 连接 <code>spider_opened</code> / <code>spider_closed</code> 信号。</li>
+                <li>
+                    <code>spider_opened</code> 时创建 Provider：装有 <code>zed_sp_schedule</code>
+                    时用 <code>Scheduler</code>，否则用 <code>default.Provider</code>，并调用 <code>start()</code>。
+                </li>
+                <li>
+                    每个 <code>ZedRequest</code> 进入 <code>process_request</code>，交给
+                    <code>provider.takeover(request)</code> 执行并返回 Response。
+                </li>
+                <li><code>spider_closed</code> 时调用 <code>provider.close()</code> 释放浏览器资源。</li>
+            </ol>
+
+            <h2>模块构成</h2>
+            <div class="tree mono">src/zed_scrapy_playwright/
+├── __init__.py     # 导出 ExecParam / ZedRequest / ZedResponse / enable / validate
+├── definition.py   # ZedRequest、ZedResponse、ExecParam、Exection
+├── functions.py    # enable() 装饰器、validate()
+├── handler.py      # PlaywrightDownloaderMiddleware（下载器中间件）
+├── interface.py    # Provider 抽象基类、ConfigDict、ChromeBrowserLaunchParameters
+├── default.py      # 默认 Provider 实现（启动 / 关闭 / takeover）
+├── constants.py    # 包名、请求前缀、中间件路径
+└── example.py      # 示例爬虫 ExampleExecutor</div>
+
+            <table>
+                <thead>
+                    <tr><th>模块</th><th>职责</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td class="mono">definition.py</td><td>请求 / 响应 / 执行参数的数据定义。</td></tr>
+                    <tr><td class="mono">interface.py</td><td>定义 <code>Provider</code> 抽象基类，规定 <code>start</code> / <code>close</code> / <code>takeover</code>。</td></tr>
+                    <tr><td class="mono">default.py</td><td>不依赖调度器时的默认 Provider，直接新建页面并执行。</td></tr>
+                    <tr><td class="mono">handler.py</td><td>下载器中间件本体；解析 <code>dev</code> / <code>extra</code> 命令行参数并探测可选子包。</td></tr>
+                    <tr><td class="mono">functions.py</td><td><code>enable()</code> 与 <code>validate()</code>。</td></tr>
+                    <tr><td class="mono">constants.py</td><td>包名、请求前缀、中间件路径等常量。</td></tr>
+                </tbody>
+            </table>
+
+            <h2>可选扩展</h2>
+            <ul>
+                <li>
+                    <a href="../schedule/index.html">zed-sp-schedule</a>：安装后
+                    <code>spider_opened</code> 会自动改用调度器 Provider，可用 CSS 选择器复用页面。
+                </li>
+                <li>
+                    <a href="../translator/index.html">zed-sp-translate</a>：把
+                    scrapy-playwright 风格的 meta 翻译为 zsp 执行流程（开发中）。
+                </li>
+            </ul>
+        </main>
+
+        <footer>
+            <div class="inner">
+                zed-scrapy-playwright · MIT License · © 2026 zhouzhouos
+            </div>
+        </footer>
+    </body>
+</html>
